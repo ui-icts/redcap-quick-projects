@@ -1,0 +1,73 @@
+{
+  "name": "Quick Projects",
+  "description": "Create/copy projects and update info/users via single POST request",
+
+  "namespace": "UIOWA\\QuickProjects",
+
+  "authors": [
+    {
+      "name": "Eric Neuhaus",
+      "email": "eric-neuhaus@uiowa.edu",
+      "institution": "University of Iowa Institute for Clinical and Translational Science"
+    }
+  ],
+
+  "links": {
+    "control-center": [
+      {
+        "name": "Quick Projects",
+        "icon": "folder",
+        "url": "index.php"
+      }
+    ]
+  },
+
+  "system-settings": [
+    {
+      "key": "prepopulate-token",
+      "name": "Prepopulate Super API Token based on currently logged in user",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "key": "super-api-token",
+      "name": "Prepopulate Super API Token with specified value (overrides above option)",
+      "type": "text",
+      "required": false
+    },
+    {
+      "key": "copy-project-settings",
+      "name": "Copy Project Settings",
+      "type": "sub_settings",
+      "required": false,
+      "sub_settings": [
+        {
+          "key": "reserved-project-flag",
+          "name": "Project note to identify reserved projects (must be enclosed in brackets, e.g. [reserved])",
+          "type": "text",
+          "required": true,
+          "repeatable": false
+        },
+        {
+          "key": "alert-emails",
+          "name": "Email address to send alerts about reserved projects",
+          "type": "text",
+          "required": false,
+          "repeatable": true
+        },
+        {
+          "key": "alert-email-from",
+          "name": "Email address to send alerts from",
+          "type": "text",
+          "required": false
+        },
+        {
+          "key": "reserve-low-threshold",
+          "name": "Send alerts when reserved project count is less than",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+      ]
+}
