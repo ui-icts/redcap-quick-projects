@@ -159,8 +159,8 @@ class QuickProjects extends AbstractExternalModule {
             $projectCount = 0;
             $isFirstRow = TRUE;
 
-            $toEmails = implode(self::getSystemSetting('alert-emails'), ',');
-            $fromEmail = self::getSystemSetting('alert-email-from');
+            $toEmails = implode(',', self::getSystemSetting('alert-emails')[0]);
+            $fromEmail = self::getSystemSetting('alert-email-from')[0];
 
             if ($result->num_rows == 0) {
                 REDCap::email($toEmails, $fromEmail, 'CRITICAL: Quick Projects Reserve Empty', 'No reserved projects found. Last request parameters: ' . var_export($_REQUEST, true));
