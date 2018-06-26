@@ -1,4 +1,6 @@
-function addElement() {
+var UIOWA_QuickProjects = {};
+
+UIOWA_QuickProjects.addElement = function() {
     var clonedUserItem = newUserItem.cloneNode(true);
     document.getElementById("projectInfo").appendChild(clonedUserItem);
     clonedUserItem.firstChild.value = '';
@@ -8,9 +10,9 @@ function addElement() {
         var btn = document.getElementById("removeUser");
         btn.disabled = false;
     }
-}
+};
 
-function removeElement() {
+UIOWA_QuickProjects.removeElement = function() {
     var userInputs = document.getElementsByName("userItem");
     var lastUser = userInputs[userInputs.length - 1];
 
@@ -22,10 +24,10 @@ function removeElement() {
         btn.disabled = true;
     }
 
-    updateUrlText();
-}
+    UIOWA_QuickProjects.updateUrlText();
+};
 
-function updateUrlText() {
+UIOWA_QuickProjects.updateUrlText = function() {
     var paramStr = '';
     var paramList = [
         'token',
@@ -107,6 +109,16 @@ function updateUrlText() {
                     paramStr += '&' + paramList[i] + '=' + '1';
                 }
             }
+            else if (paramList[i] == 'token') {
+                var superToken = document.getElementById('superToken');
+                var tokenStyle = window.getComputedStyle(superToken);
+
+                inputValue = projectInfo[j].value;
+
+                if (tokenStyle.display !== 'none' && inputValue) {
+                    paramStr += '&' + paramList[i] + '=' + inputValue.replace(/ /g, '+');
+                }
+            }
             else {
                 inputValue = projectInfo[j].value;
 
@@ -119,25 +131,30 @@ function updateUrlText() {
 
     urlElm.value = baseUrl.trim() + paramStr;
     submitElm.action = baseUrl.trim() + paramStr;
-}
+};
 
-function updateFields() {
+UIOWA_QuickProjects.updateFields = function(reqToken) {
     var projectSetup = document.querySelector('input[name = "setupMethod"]:checked').value;
     var projectTitle = document.getElementById('app_title');
     var projectPurpose = document.getElementById('purpose');
+    var superToken = document.getElementById('superToken');
 
     if (projectSetup == 'create') {
         projectTitle.required = true;
         projectPurpose.required = true;
+        superToken.style = ""
     }
     else if (projectSetup == 'copy') {
         projectTitle.required = false;
         projectPurpose.required = false;
 
+        if (!reqToken[0]) {
+            superToken.style.display = "none"
+        }
     }
-}
+};
 
-function confirmRedirect(message, url) {
+UIOWA_QuickProjects.confirmRedirect = function(message, url) {
     var msgStr = '';
 
     for (var i in message) {
@@ -149,4 +166,4 @@ function confirmRedirect(message, url) {
     if (confirmed) {
         window.location.href = url;
     }
-}
+};

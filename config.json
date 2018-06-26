@@ -22,6 +22,10 @@
     ]
   },
 
+  "no-auth-pages": [
+    "requestHandler"
+  ],
+
   "system-settings": [
     {
       "key": "prepopulate-token",
@@ -66,8 +70,32 @@
           "name": "Send alerts when reserved project count is less than",
           "type": "text",
           "required": false
+        },
+        {
+          "key": "require-super-token",
+          "name": "Require Super API Token for the Copy Project action",
+          "type": "checkbox",
+          "required": false,
+          "repeatable": false
         }
       ]
+    },
+    {
+      "key": "restrict-ip",
+      "name": "Only allow requests from whitelisted IP addresses",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "key": "whitelisted-ip",
+      "name": "Allowed IP address",
+      "type": "text",
+      "required": false,
+      "repeatable": true,
+      "branchingLogic": {
+        "field": "restrict-ip",
+        "value": "true"
+      }
     }
       ]
 }

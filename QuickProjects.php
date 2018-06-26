@@ -40,12 +40,15 @@ class QuickProjects extends AbstractExternalModule {
     }
 
     public function generateProject() {
+        session_start();
 
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
             self::returnResultMessage(["ERROR: The requested method is not implemented."], null);
         }
 
-        session_start();
+        if ($this->getSystemSetting('restrict-ip') && !in_array($_SERVER['REMOTE_ADDR'], $this->getSystemSetting('whitelisted-ip'))) {
+            self::returnResultMessage(["ERROR: This IP (" . $_SERVER['REMOTE_ADDR'] . ") is not on the whitelist."], null);
+        }
 
         $permissionsPresets = self::getPermissionsPresets();
         $successMsg = [];
@@ -58,7 +61,13 @@ class QuickProjects extends AbstractExternalModule {
 
         $result = db_query($sql);
 
-        if (db_num_rows($result) == 0) {
+        $apiRequired = true;
+
+        if ($_REQUEST['method'] == 'copy' && !$this->getSystemSetting('require-super-token')[0]) {
+            $apiRequired = false;
+        }
+
+        if (db_num_rows($result) == 0 && $apiRequired) {
             self::returnResultMessage(["ERROR: Invalid API Super Token"], null);
         }
 
@@ -265,6 +274,7 @@ class QuickProjects extends AbstractExternalModule {
 
         $superApiToken = $this->getSystemSetting('super-api-token');
         $prepopulateUserToken = $this->getSystemSetting('prepopulate-token');
+        $reqCopyToken = json_encode($this->getSystemSetting('require-super-token'));
 
         if ($superApiToken) {
             $superApiToken = $this->getSystemSetting('super-api-token');
@@ -289,15 +299,15 @@ class QuickProjects extends AbstractExternalModule {
 
         <table style="width:100%;font-size:12px;" cellpadding="0" cellspacing="0">
             <!-- Table rows for Create/Edit Project form -->
-            <tbody id="projectInfo" oninput="updateUrlText()">
+            <tbody id="projectInfo" oninput="UIOWA_QuickProjects.updateUrlText()">
                 <tr valign="top">
                     <td style="padding-right:20px;width:200px;">
                         <b>Setup method:</b>
                     </td>
                     <td>
-                        <input type="radio" id="create" name="setupMethod" onclick="updateUrlText(); updateFields();" value="create" checked>
+                        <input type="radio" id="create" name="setupMethod" onclick="UIOWA_QuickProjects.updateUrlText(); UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>);" value="create" checked>
                         <label for="create"> Create</label>
-                        <input type="radio" id="copy" name="setupMethod" onclick="updateUrlText(); updateFields();" value="copy">
+                        <input type="radio" id="copy" name="setupMethod" onclick="UIOWA_QuickProjects.updateUrlText(); UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>);" value="copy">
                         <label for="copy"> Copy</label>
                     </td>
                 </tr>
@@ -306,13 +316,13 @@ class QuickProjects extends AbstractExternalModule {
                         <b>Return value:</b>
                     </td>
                     <td>
-                        <input type="radio" id="projectLink" name="returnValue" onclick="updateUrlText()" value="projectLink" checked>
+                        <input type="radio" id="projectLink" name="returnValue" onclick="UIOWA_QuickProjects.updateUrlText()" value="projectLink" checked>
                         <label for="projectLink"> Project Link</label>
-                        <input type="radio" id="publicSurveyLink" name="returnValue" onclick="updateUrlText()" value="publicSurveyLink">
+                        <input type="radio" id="publicSurveyLink" name="returnValue" onclick="UIOWA_QuickProjects.updateUrlText()" value="publicSurveyLink">
                         <label for="publicSurveyLink"> Public Survey Link</label>
                     </td>
                 </tr>
-                <tr valign="top">
+                <tr valign="top" id="superToken">
                     <td style="padding-right:20px;width:200px;">
                         <label for="token">Super API token: </label>
                     </td>
@@ -357,7 +367,7 @@ if (this.value == &quot;2&quot;) {
     $(&quot;#purpose_other_select&quot;).val(&quot;&quot;);
     $(&quot;#purpose_other_select, #purpose_other&quot;).hide();
 }
-updateUrlText();
+UIOWA_QuickProjects.updateUrlText();
 ">
                         <option value=""> ---- Select One ---- </option>
                         <option value="0">Practice / Just for fun</option>
@@ -382,13 +392,13 @@ updateUrlText();
                             <div style="padding:3px 0;">
                                 <b>IRB number (if applicable):</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                 <input type="text" maxlength="100" size="15" name="irb" id="project_irb_number" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field">
-                                <input type="checkbox" name="irb_unique" id="irb_unique" onclick="updateUrlText()">
+                                <input type="checkbox" name="irb_unique" id="irb_unique" onclick="UIOWA_QuickProjects.updateUrlText()">
                                 <label for="surveys">Must be unique</label><br/>
                             </div>
                         </div>
                         <b>Please specify:</b>&nbsp;&nbsp;&nbsp;
                         <input type="text" maxlength="100" size="40" name="purpose_other_text" id="purpose_other_text" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field" style="display:none;">
-                        <div id="purpose_other" name="purpose_other" onclick="updateUrlText()" style="display: none;">
+                        <div id="purpose_other" name="purpose_other" onclick="UIOWA_QuickProjects.updateUrlText()" style="display: none;">
                             <div style="text-indent:-1.9em;padding-left:1.9em;"><input type="checkbox" name="purpose_other[0]" id="purpose_other[0]" value="0"> Basic or bench research </div>
                             <div style="text-indent:-1.9em;padding-left:1.9em;"><input type="checkbox" name="purpose_other[1]" id="purpose_other[1]" value="1"> Clinical research study or trial </div>
                             <div style="text-indent:-1.9em;padding-left:1.9em;"><input type="checkbox" name="purpose_other[2]" id="purpose_other[2]" value="2"> Translational research 1 (applying discoveries to the development of trials and studies in humans) </div>
@@ -424,18 +434,18 @@ updateUrlText();
                 <td>
                 </td>
                 <td style="padding-right:20px;width:200px;">
-                    <input type="checkbox" name="surveys" id="surveys" onclick="updateUrlText()">
+                    <input type="checkbox" name="surveys" id="surveys" onclick="UIOWA_QuickProjects.updateUrlText()">
                     <label for="surveys">Surveys enabled</label><br/>
-                    <input type="checkbox" name="longitudinal" id="longitudinal" onclick="updateUrlText()">
+                    <input type="checkbox" name="longitudinal" id="longitudinal" onclick="UIOWA_QuickProjects.updateUrlText()">
                     <label for="longitudinal">Longitudinal study</label><br/>
-                    <input type="checkbox" name="autonumber" id="autonumber" onclick="updateUrlText()">
+                    <input type="checkbox" name="autonumber" id="autonumber" onclick="UIOWA_QuickProjects.updateUrlText()">
                     <label for="autonumber">Record autonumbering</label>
                 </td>
             </tr>
             <tr>
                 <td>
                     <b>Users: </b><br/>
-                    <button id='addUser' onclick="addElement()">+</button><button id='removeUser' disabled onclick="removeElement();">-</button>
+                    <button id='addUser' onclick="UIOWA_QuickProjects.addElement()">+</button><button id='removeUser' disabled onclick="UIOWA_QuickProjects.removeElement();">-</button>
                 </td>
                 <td>
                 </td>
@@ -476,7 +486,8 @@ updateUrlText();
 
     <script>
         var urlElm = document.getElementById("url");
-        var baseUrl = urlElm.value;
+        var baseUrl = urlElm.value.split('&method')[0];
+
         var submitElm = document.getElementById("submit");
 
         var userItem = document.getElementById("originalUserItem");
@@ -489,7 +500,7 @@ updateUrlText();
 
         document.getElementById("redirect").value = window.location.href;
 
-        updateUrlText();
+        UIOWA_QuickProjects.updateUrlText();
 
         <?php
         if(isset($_SESSION['result'])){ //check if form was submitted
@@ -498,7 +509,7 @@ updateUrlText();
             unset($_SESSION['result']);
             unset($_SESSION['redirectUrl']);
 
-            echo "confirmRedirect(" . json_encode($returnValue) . ",\"$redirectUrl\");";
+            echo "UIOWA_QuickProjects.confirmRedirect(" . json_encode($returnValue) . ",\"$redirectUrl\");";
         }
         ?>
     </script>
