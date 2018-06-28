@@ -45,6 +45,8 @@ UIOWA_QuickProjects.updateUrlText = function() {
         'userItem'
     ];
 
+    paramStr += '&NOAUTH=';
+
     var projectSetup = document.querySelector('input[name = "setupMethod"]:checked').value;
     paramStr += '&method=' + projectSetup;
 

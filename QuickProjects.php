@@ -93,16 +93,23 @@ class QuickProjects extends AbstractExternalModule {
 
         $supertoken = $_REQUEST['token'];
 
+        $projectTitle = htmlentities($_REQUEST['title']);
+        $projectNote = htmlentities($_REQUEST['note']);
+        $projectPiFname = htmlentities($_REQUEST['pi_fname']);
+        $projectPiLname = htmlentities($_REQUEST['pi_lname']);
+        $projectIrb = htmlentities($_REQUEST['irb']);
+
+
         $createProject = array(
             'token' => $supertoken,
             'content' => 'project',
             'format' => 'json',
             'returnFormat' => 'json',
             'data' => '[' . json_encode(array(
-                'project_title' => $_REQUEST['title'],
+                'project_title' => html_entity_decode($projectTitle),
                 'purpose' => $_REQUEST['purpose'],
                 'purpose_other' => $_REQUEST['purpose_other'],
-                'project_notes' => $_REQUEST['note'],
+                'project_notes' => html_entity_decode($projectNote),
                 'is_longitudinal' => $_REQUEST['longitudinal'],
                 'surveys_enabled' => $_REQUEST['surveys'],
                 'record_autonumbering_enabled' => $_REQUEST['autonumber']
@@ -115,13 +122,13 @@ class QuickProjects extends AbstractExternalModule {
             'format' => 'json',
             'returnFormat' => 'json',
             'data' => json_encode(array(
-                'project_title' => $_REQUEST['title'],
-                'project_pi_firstname' => $_REQUEST['pi_fname'],
-                'project_pi_lastname' => $_REQUEST['pi_lname'],
-                'project_irb_number' => $_REQUEST['irb'],
+                'project_title' => html_entity_decode($projectTitle),
+                'project_pi_firstname' => html_entity_decode($projectPiFname),
+                'project_pi_lastname' => html_entity_decode($projectPiLname),
+                'project_irb_number' => html_entity_decode($projectIrb),
                 'purpose' => $_REQUEST['purpose'],
                 'purpose_other' => $_REQUEST['purpose_other'],
-                'project_notes' => (isset($_POST['note']) ? $_POST['note'] : ''),
+                'project_notes' => html_entity_decode((isset($_POST['note']) ? $projectNote : '')),
                 'is_longitudinal' => $_REQUEST['longitudinal'],
                 'surveys_enabled' => $_REQUEST['surveys'],
                 'record_autonumbering_enabled' => $_REQUEST['autonumber']
@@ -305,9 +312,9 @@ class QuickProjects extends AbstractExternalModule {
                         <b>Setup method:</b>
                     </td>
                     <td>
-                        <input type="radio" id="create" name="setupMethod" onclick="UIOWA_QuickProjects.updateUrlText(); UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>);" value="create" checked>
+                        <input type="radio" id="create" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>); UIOWA_QuickProjects.updateUrlText();" value="create" checked>
                         <label for="create"> Create</label>
-                        <input type="radio" id="copy" name="setupMethod" onclick="UIOWA_QuickProjects.updateUrlText(); UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>);" value="copy">
+                        <input type="radio" id="copy" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>); UIOWA_QuickProjects.updateUrlText();" value="copy">
                         <label for="copy"> Copy</label>
                     </td>
                 </tr>
@@ -392,8 +399,9 @@ UIOWA_QuickProjects.updateUrlText();
                             <div style="padding:3px 0;">
                                 <b>IRB number (if applicable):</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                 <input type="text" maxlength="100" size="15" name="irb" id="project_irb_number" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field">
-                                <input type="checkbox" name="irb_unique" id="irb_unique" onclick="UIOWA_QuickProjects.updateUrlText()">
-                                <label for="surveys">Must be unique</label><br/>
+                                <!-- "Must be unique" option hidden -->
+                                <input style="display:none;" type="checkbox" name="irb_unique" id="irb_unique" onclick="UIOWA_QuickProjects.updateUrlText()">
+                                <label style="display:none;" for="surveys">Must be unique</label><br/>
                             </div>
                         </div>
                         <b>Please specify:</b>&nbsp;&nbsp;&nbsp;
@@ -519,6 +527,7 @@ UIOWA_QuickProjects.updateUrlText();
     public function returnResultMessage($message, $url) {
 
         if ($url == null) {
+            http_response_code(400);
             echo $message[0];
             exit;
         }
