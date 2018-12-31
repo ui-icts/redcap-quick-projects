@@ -9,6 +9,12 @@ class QuickProjects extends AbstractExternalModule {
     public static $apiUrl = APP_PATH_WEBROOT_FULL . 'api/';
 
     public function getPermissionsPresets() {
+        global $conn;
+        if (!isset($conn))
+        {
+            db_connect(false);
+        }
+
         $sql = "
               SELECT
                 external_module_id
@@ -22,18 +28,25 @@ class QuickProjects extends AbstractExternalModule {
               SELECT
                 value
               FROM redcap_external_module_settings
-              WHERE external_module_id=$quickPermissionsID and `key`='presets'
+              WHERE external_module_id=? and `key`='user-presets'
           ";
 
-        $result = db_query($sql);
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('i', $quickPermissionsID);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $stmt->close();
+
+        $defaultPresetsJson = "{\"none\":{\"title\":\"None\",\"data\":{\"design\":\"0\",\"user_rights\":\"0\",\"data_access_groups\":\"0\",\"data_export_tool\":\"0\",\"reports\":\"0\",\"graphical\":\"0\",\"calendar\":\"0\",\"data_import_tool\":\"0\",\"data_comparison_tool\":\"0\",\"data_logging\":\"0\",\"file_repository\":\"0\",\"data_quality_design\":\"0\",\"data_quality_execute\":\"0\",\"record_create\":\"0\",\"record_rename\":\"0\",\"record_delete\":\"0\",\"lock_record_multiform\":\"0\",\"lock_record\":\"0\",\"lock_record_customize\":\"0\",\"mobile_app\":\"0\",\"mobile_app_download_data\":\"0\",\"api_export\":\"0\",\"api_import\":\"0\"}},\"all\":{\"title\":\"All (No Mobile App/API)\",\"data\":{\"design\":\"1\",\"user_rights\":\"1\",\"data_access_groups\":\"1\",\"data_export_tool\":\"1\",\"reports\":\"1\",\"graphical\":\"1\",\"calendar\":\"1\",\"data_import_tool\":\"1\",\"data_comparison_tool\":\"1\",\"data_logging\":\"1\",\"file_repository\":\"1\",\"data_quality_design\":\"1\",\"data_quality_execute\":\"1\",\"record_create\":\"1\",\"record_rename\":\"1\",\"record_delete\":\"1\",\"lock_record_multiform\":\"1\",\"lock_record\":\"2\",\"lock_record_customize\":\"1\",\"mobile_app\":\"0\",\"mobile_app_download_data\":\"0\",\"api_export\":\"0\",\"api_import\":\"0\"}},\"redcap-default\":{\"title\":\"REDCap Default\",\"data\":{\"design\":\"0\",\"user_rights\":\"0\",\"data_access_groups\":\"0\",\"data_export_tool\":\"2\",\"reports\":\"1\",\"graphical\":\"1\",\"calendar\":\"1\",\"data_import_tool\":\"0\",\"data_comparison_tool\":\"0\",\"data_logging\":\"0\",\"file_repository\":\"1\",\"data_quality_design\":\"0\",\"data_quality_execute\":\"0\",\"record_create\":\"1\",\"record_rename\":\"0\",\"record_delete\":\"0\",\"lock_record_multiform\":\"0\",\"lock_record\":\"0\",\"lock_record_customize\":\"0\",\"mobile_app\":\"0\",\"mobile_app_download_data\":\"0\",\"api_export\":\"0\",\"api_import\":\"0\"}}}";
+        $permissionsPresets = json_decode($defaultPresetsJson, true);
 
         if ($result -> num_rows > 0) {
-            $permissionsPresets = json_decode(db_fetch_assoc($result)['value'], true);
-        }
-        else {
-            $defaultPresetsJson = "{\"none\":{\"title\":\"None\",\"data\":{\"design\":\"0\",\"user_rights\":\"0\",\"data_access_groups\":\"0\",\"data_export\":\"0\",\"reports\":\"0\",\"stats_and_charts\":\"0\",\"calendar\":\"0\",\"data_import_tool\":\"0\",\"data_comparison_tool\":\"0\",\"logging\":\"0\",\"file_repository\":\"0\",\"data_quality_create\":\"0\",\"data_quality_execute\":\"0\",\"record_create\":\"0\",\"record_rename\":\"0\",\"record_delete\":\"0\",\"lock_records_all_forms\":\"0\",\"lock_records\":\"0\",\"lock_records_customization\":\"0\"}},\"all\":{\"title\":\"All (No Mobile App/API)\",\"data\":{\"design\":\"1\",\"user_rights\":\"1\",\"data_access_groups\":\"1\",\"data_export\":\"1\",\"reports\":\"1\",\"stats_and_charts\":\"1\",\"calendar\":\"1\",\"data_import_tool\":\"1\",\"data_comparison_tool\":\"1\",\"logging\":\"1\",\"file_repository\":\"1\",\"data_quality_create\":\"1\",\"data_quality_execute\":\"1\",\"record_create\":\"1\",\"record_rename\":\"1\",\"record_delete\":\"1\",\"lock_records_all_forms\":\"1\",\"lock_records\":\"2\",\"lock_records_customization\":\"1\"}},\"minimal-data-entry\":{\"title\":\"Minimal Data Entry\",\"data\":{\"design\":\"0\",\"user_rights\":\"0\",\"data_access_groups\":\"0\",\"data_export\":\"0\",\"reports\":\"0\",\"stats_and_charts\":\"0\",\"calendar\":\"0\",\"data_import_tool\":\"0\",\"data_comparison_tool\":\"0\",\"logging\":\"0\",\"file_repository\":\"0\",\"data_quality_create\":\"0\",\"data_quality_execute\":\"0\",\"record_create\":\"1\",\"record_rename\":\"0\",\"record_delete\":\"0\",\"lock_records_all_forms\":\"0\",\"lock_records\":\"0\",\"lock_records_customization\":\"0\"}}}";
+            $userPresets = json_decode(db_fetch_assoc($result)['value'], true);
 
-            $permissionsPresets = json_decode($defaultPresetsJson, true);
+            foreach ($userPresets as $key => $value) {
+                $permissionsPresets[$key] = $value;
+            }
         }
 
         return $permissionsPresets;
@@ -41,6 +54,12 @@ class QuickProjects extends AbstractExternalModule {
 
     public function generateProject() {
         session_start();
+
+        global $conn;
+        if (!isset($conn))
+        {
+            db_connect(false);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
             self::returnResultMessage(["ERROR: The requested method is not implemented."], null);
@@ -57,13 +76,18 @@ class QuickProjects extends AbstractExternalModule {
             SELECT
               redcap_user_information.api_token
             FROM redcap_user_information
-            WHERE api_token = '" . $_REQUEST['token'] . "'";
+            WHERE api_token = ?";
 
-        $result = db_query($sql);
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('s', $_REQUEST['token']);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $stmt->close();
 
         $apiRequired = true;
 
-        if ($_REQUEST['method'] == 'copy' && !$this->getSystemSetting('require-super-token')[0]) {
+        if ($_REQUEST['method'] == 'modify' && !$this->getSystemSetting('require-super-token')[0]) {
             $apiRequired = false;
         }
 
@@ -77,9 +101,14 @@ class QuickProjects extends AbstractExternalModule {
             SELECT
               redcap_projects.project_irb_number
             FROM redcap_projects
-            WHERE project_irb_number = '" . $_REQUEST['irb'] . "'";
+            WHERE project_irb_number = ?";
 
-            $result = db_query($sql);
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('s', $_REQUEST['irb']);
+            $stmt->execute();
+
+            $result = $stmt->get_result();
+            $stmt->close();
 
             if ($result -> num_rows > 0) {
                 self::returnResultMessage(["ERROR: Project with provided IRB number already exists."], null);
@@ -90,14 +119,17 @@ class QuickProjects extends AbstractExternalModule {
         if ($_REQUEST['method'] == "create" && ($_REQUEST['title'] == '' || $_REQUEST['purpose'] == '')) {
             self::returnResultMessage(["ERROR: Project Title and/or Purpose are missing. These parameters are required for new project creation."], null);
         }
+        if ($_REQUEST['method'] == "modify" && ($_REQUEST['title'] == '')) {
+            self::returnResultMessage(["ERROR: Project Title is missing. This parameter is required for project copies."], null);
+        }
 
         $supertoken = $_REQUEST['token'];
 
-        $projectTitle = htmlentities($_REQUEST['title']);
-        $projectNote = htmlentities($_REQUEST['note']);
-        $projectPiFname = htmlentities($_REQUEST['pi_fname']);
-        $projectPiLname = htmlentities($_REQUEST['pi_lname']);
-        $projectIrb = htmlentities($_REQUEST['irb']);
+        $projectTitle = urldecode($_REQUEST['title']);
+        $projectNote = urldecode($_REQUEST['note']);
+        $projectPiFname = urldecode($_REQUEST['pi_fname']);
+        $projectPiLname = urldecode($_REQUEST['pi_lname']);
+        $projectIrb = urldecode($_REQUEST['irb']);
 
 
         $createProject = array(
@@ -106,10 +138,10 @@ class QuickProjects extends AbstractExternalModule {
             'format' => 'json',
             'returnFormat' => 'json',
             'data' => '[' . json_encode(array(
-                'project_title' => html_entity_decode($projectTitle),
+                'project_title' => $projectTitle,
                 'purpose' => $_REQUEST['purpose'],
                 'purpose_other' => $_REQUEST['purpose_other'],
-                'project_notes' => html_entity_decode($projectNote),
+                'project_notes' => $projectNote,
                 'is_longitudinal' => $_REQUEST['longitudinal'],
                 'surveys_enabled' => $_REQUEST['surveys'],
                 'record_autonumbering_enabled' => $_REQUEST['autonumber']
@@ -122,13 +154,13 @@ class QuickProjects extends AbstractExternalModule {
             'format' => 'json',
             'returnFormat' => 'json',
             'data' => json_encode(array(
-                'project_title' => html_entity_decode($projectTitle),
-                'project_pi_firstname' => html_entity_decode($projectPiFname),
-                'project_pi_lastname' => html_entity_decode($projectPiLname),
-                'project_irb_number' => html_entity_decode($projectIrb),
+                'project_title' => $projectTitle,
+                'project_pi_firstname' => $projectPiFname,
+                'project_pi_lastname' => $projectPiLname,
+                'project_irb_number' => $projectIrb,
                 'purpose' => $_REQUEST['purpose'],
                 'purpose_other' => $_REQUEST['purpose_other'],
-                'project_notes' => html_entity_decode((isset($_POST['note']) ? $projectNote : '')),
+                'project_notes' => (isset($_POST['note']) ? $projectNote : ''),
                 'is_longitudinal' => $_REQUEST['longitudinal'],
                 'surveys_enabled' => $_REQUEST['surveys'],
                 'record_autonumbering_enabled' => $_REQUEST['autonumber']
@@ -152,12 +184,13 @@ class QuickProjects extends AbstractExternalModule {
 
             array_push($successMsg, "Project successfully created!");
         }
-        else if ($_REQUEST['method'] == 'copy') {
+        else if ($_REQUEST['method'] == 'modify') {
             $projectInfo['content'] = 'project_settings';
 
-            $reservedProjectFlag = self::getSystemSetting('reserved-project-flag')[0];
+            $reservedFlagLookup = self::getSystemSetting('reserved-project-flag')[0];
+            $reservedFlag = urldecode($_REQUEST['flag']);
 
-            if (!$reservedProjectFlag || !($reservedProjectFlag[0] == '[' && $reservedProjectFlag[strlen($reservedProjectFlag) - 1] == ']')) {
+            if (!$reservedFlag || !($reservedFlag[0] == '[' && $reservedFlag[strlen($reservedFlag) - 1] == ']') || !in_array($reservedFlag, $reservedFlagLookup)) {
                 self::returnResultMessage(["ERROR: Reserved project flag is invalid or blank. Please check your configuration in the Control Center."], null);
             }
 
@@ -167,10 +200,15 @@ class QuickProjects extends AbstractExternalModule {
                   redcap_user_rights.api_token
                 FROM redcap_projects
                 INNER JOIN redcap_user_rights on redcap_user_rights.project_id = redcap_projects.project_id
-                WHERE project_note = '" . $reservedProjectFlag . "' and api_token is not null
+                WHERE project_note = ? and api_token is not null and date_deleted is null
             ";
 
-            $result = db_query($sql);
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('s', $reservedFlag);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $stmt->close();
+
             $reservedPID = null;
             $projectCount = 0;
             $isFirstRow = TRUE;
@@ -181,7 +219,7 @@ class QuickProjects extends AbstractExternalModule {
             if ($result->num_rows == 0) {
                 REDCap::email($toEmails, $fromEmail, 'CRITICAL: Quick Projects Reserve Empty', 'No reserved projects found. Last request parameters: ' . var_export($_REQUEST, true));
                 self::returnResultMessage(["ERROR: No reserved projects found. Sending email to administrator with study information for manual creation. "], null);
-            } elseif ($result->num_rows < self::getSystemSetting('reserve-low-threshold')) {
+            } elseif ($result->num_rows < self::getSystemSetting('reserve-low-threshold')[0]) {
                 REDCap::email($toEmails, $fromEmail, 'Warning: Quick Projects Reserve Low', $result->num_rows . ' reserved projects remaining. Please create more reserved projects.');
             }
 
@@ -196,7 +234,7 @@ class QuickProjects extends AbstractExternalModule {
                 $projectCount += 1;
             }
 
-            array_push($successMsg, "Project template successfully copied!");
+            array_push($successMsg, "Project successfully modified!");
         }
 
         $projectInfo['token'] = $token;
@@ -223,6 +261,34 @@ class QuickProjects extends AbstractExternalModule {
 
         $this->redcapApiCall($importUsers, false);
 
+        if (isset($_REQUEST['surveyNotification'])) {
+            $notifications = $_REQUEST['surveyNotification'];
+
+            foreach ($notifications as $index=>$notification) {
+                if ($notification == 'true') {
+                    $sql = "insert into redcap_actions (project_id, survey_id, action_trigger, action_response, recipient_id) values
+                        (
+                            $reservedPID,
+                            (select survey_id from redcap_surveys where project_id = $reservedPID limit 1),
+                            'ENDOFSURVEY',
+                            'EMAIL_PRIMARY',
+                            (select ui_id from redcap_user_information where username =  '" . db_escape($users[$index]) . "' limit 1)
+                        )";
+
+                    $result = db_query($sql);
+
+                    if (!$result) {
+                        if ($this->getSystemSetting('survey-notification-fail')[0]) {
+                            self::returnResultMessage(["WARNING: Project modified successfully but failed to enable survey notifications."], null);
+                        }
+                    }
+                    else {
+                        \REDCap::logEvent("Manage/Design", "Enabled survey notification for user", $sql, null, null, $reservedPID);
+                    }
+                }
+            }
+        }
+
         if ($_REQUEST['return'] == 'publicSurveyLink') {
                 $sql = "
             SELECT s.project_id,s.form_name,s.title as survey_title
@@ -234,10 +300,16 @@ class QuickProjects extends AbstractExternalModule {
             INNER JOIN redcap_events_arms ea ON ea.arm_id = em.arm_id
             INNER JOIN (SELECT project_id, COUNT(arm_id) as num_project_arms FROM redcap_events_arms GROUP BY project_id) proj_ea ON proj_ea.project_id = pr.project_id
             LEFT OUTER JOIN redcap_surveys_response r ON p.participant_id = r.participant_id
-            WHERE s.project_id = " . $reservedPID . " AND p.participant_email IS NULL LIMIT 1
+            WHERE s.project_id = ? AND p.participant_email IS NULL LIMIT 1
         ";
 
-            $result = db_query($sql);
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('i', $reservedPID);
+            $stmt->execute();
+
+            $result = $stmt->get_result();
+            $stmt->close();
+
             $row = db_fetch_assoc($result);
 
             if ($row['hash']) {
@@ -281,7 +353,8 @@ class QuickProjects extends AbstractExternalModule {
 
         $superApiToken = $this->getSystemSetting('super-api-token');
         $prepopulateUserToken = $this->getSystemSetting('prepopulate-token');
-        $reqCopyToken = json_encode($this->getSystemSetting('require-super-token'));
+        $reqModifyToken = json_encode($this->getSystemSetting('require-super-token'));
+        $reservedProjectFlags = self::getSystemSetting('reserved-project-flag')[0];
 
         if ($superApiToken) {
             $superApiToken = $this->getSystemSetting('super-api-token');
@@ -308,18 +381,18 @@ class QuickProjects extends AbstractExternalModule {
             <!-- Table rows for Create/Edit Project form -->
             <tbody id="projectInfo" oninput="UIOWA_QuickProjects.updateUrlText()">
                 <tr valign="top">
-                    <td style="padding-right:20px;width:200px;">
+                    <td style="padding-right:20px;width:150px;">
                         <b>Setup method:</b>
                     </td>
                     <td>
-                        <input type="radio" id="create" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>); UIOWA_QuickProjects.updateUrlText();" value="create" checked>
+                        <input type="radio" id="create" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqModifyToken?>); UIOWA_QuickProjects.updateUrlText();" value="create" checked>
                         <label for="create"> Create</label>
-                        <input type="radio" id="copy" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqCopyToken?>); UIOWA_QuickProjects.updateUrlText();" value="copy">
-                        <label for="copy"> Copy</label>
+                        <input type="radio" id="modify" name="setupMethod" onclick="UIOWA_QuickProjects.updateFields(<?=$reqModifyToken?>); UIOWA_QuickProjects.updateUrlText();" value="modify">
+                        <label for="modify"> Modify</label>
                     </td>
                 </tr>
                 <tr valign="top">
-                    <td style="padding-right:20px;width:200px;">
+                    <td style="padding-right:20px;width:150px;">
                         <b>Return value:</b>
                     </td>
                     <td>
@@ -330,22 +403,36 @@ class QuickProjects extends AbstractExternalModule {
                     </td>
                 </tr>
                 <tr valign="top" id="superToken">
-                    <td style="padding-right:20px;width:200px;">
-                        <label for="token">Super API token: </label>
+                    <td style="padding-right:20px;width:150px;">
+                        <b>Super API token: </b>
                     </td>
                     <td>
                         <input id="token" type="text" name="token" style="width:70%;max-width:450px;" required value="<?= $superApiToken ?>">
+                    </td>
+                </tr>
+                <tr valign="top" id="reservedFlag" style="display: none;">
+                    <td style="padding-right:20px;width:150px;">
+                        <b>Reserved flag: </b>
+                    </td>
+                    <td>
+                        <select id="flag" type="text" name="flag" style="width:70%;max-width:450px;" required>
+                            <?php
+                            foreach($reservedProjectFlags as $key => $value):
+                                echo '<option value="' . $value . '">' . $value . '</option>';
+                            endforeach;
+                            ?>
+                        </select>
                     </td>
                 </tr>
                 <tr>
                     <td><br/><br/></td>
                 </tr>
                 <tr valign="top">
-                    <td style="padding-right:20px;width:200px;">
+                    <td style="padding-right:20px;width:150px;">
                         <b>Project title:</b>
                     </td>
                     <td>
-                        <input name="title" id="app_title" autocomplete="new-password" type="text" style="width:95%;max-width:450px;" class="x-form-text x-form-field" onkeydown="if(event.keyCode==13){return false;}" value="<?= $_REQUEST['title'] ?>" required>
+                        <input name="title" id="app_title" type="text" style="width:95%;max-width:450px;" class="x-form-text x-form-field" onkeydown="if(event.keyCode==13){return false;}" value="<?= $_REQUEST['title'] ?>" required>
                     </td>
                 </tr>
 
@@ -389,7 +476,7 @@ UIOWA_QuickProjects.updateUrlText();
                             <div style="padding:3px 0;">
                                 <div style="float:left;"><b>Name of P.I. (if applicable):</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
                                 <div style="float:left;color:#555;">
-                                    <input type="text" maxlength="100" name="pi_fname" id="project_pi_firstname" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field" style="width:100px;">
+                                    <input type="text" maxlength="100" name="pi_fname" id="project_pi_firstname" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field" style="width:150px;">
                                     <br>First name					</div>
                                 <div style="float:left;color:#555;">
                                     <input type="text" maxlength="100" name="pi_lname" id="project_pi_lastname" onkeydown="if(event.keyCode==13){return false;}" class="x-form-text x-form-field" style="width:110px;">
@@ -441,7 +528,7 @@ UIOWA_QuickProjects.updateUrlText();
             <tr>
                 <td>
                 </td>
-                <td style="padding-right:20px;width:200px;">
+                <td style="padding-right:20px;width:150px;" id="newProjectSettings">
                     <input type="checkbox" name="surveys" id="surveys" onclick="UIOWA_QuickProjects.updateUrlText()">
                     <label for="surveys">Surveys enabled</label><br/>
                     <input type="checkbox" name="longitudinal" id="longitudinal" onclick="UIOWA_QuickProjects.updateUrlText()">
@@ -453,7 +540,7 @@ UIOWA_QuickProjects.updateUrlText();
             <tr>
                 <td>
                     <b>Users: </b><br/>
-                    <button id='addUser' onclick="UIOWA_QuickProjects.addElement()">+</button><button id='removeUser' disabled onclick="UIOWA_QuickProjects.removeElement();">-</button>
+                    <button id='addUser' onclick="UIOWA_QuickProjects.addService()">+</button><button id='removeUser' disabled onclick="UIOWA_QuickProjects.removeElement();">-</button>
                 </td>
                 <td>
                 </td>
@@ -469,6 +556,7 @@ UIOWA_QuickProjects.updateUrlText();
                         endforeach;
                         ?>
                     </select>
+                    <label id="surveyNotification"><input type="checkbox" name="surveyNotification"> Survey notifications</label>
                 </td>
             </tr>
         </tbody>
@@ -476,8 +564,8 @@ UIOWA_QuickProjects.updateUrlText();
 
     <br/>
     <br/>
-    <div style="padding-right:20px;width:200px;">
-        <b>Request URL: </b>
+    <div style="padding-right:20px;width:150px;">
+        <b>Request URL: </b><br />
         <button id='copy_btn' data-clipboard-target="#url">Copy</button>
     </div>
     <div>
@@ -508,7 +596,10 @@ UIOWA_QuickProjects.updateUrlText();
 
         document.getElementById("redirect").value = window.location.href;
 
-        UIOWA_QuickProjects.updateUrlText();
+        $(document).ready(function(){
+            UIOWA_QuickProjects.updateUrlText();
+            UIOWA_QuickProjects.updateFields();
+        });
 
         <?php
         if(isset($_SESSION['result'])){ //check if form was submitted

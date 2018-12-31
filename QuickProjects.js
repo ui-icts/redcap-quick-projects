@@ -1,6 +1,6 @@
 var UIOWA_QuickProjects = {};
 
-UIOWA_QuickProjects.addElement = function() {
+UIOWA_QuickProjects.addService = function() {
     var clonedUserItem = newUserItem.cloneNode(true);
     document.getElementById("projectInfo").appendChild(clonedUserItem);
     clonedUserItem.firstChild.value = '';
@@ -10,6 +10,8 @@ UIOWA_QuickProjects.addElement = function() {
         var btn = document.getElementById("removeUser");
         btn.disabled = false;
     }
+
+    UIOWA_QuickProjects.updateFields();
 };
 
 UIOWA_QuickProjects.removeElement = function() {
@@ -31,6 +33,7 @@ UIOWA_QuickProjects.updateUrlText = function() {
     var paramStr = '';
     var paramList = [
         'token',
+        'flag',
         'title',
         'irb',
         'pi_fname',
@@ -41,7 +44,6 @@ UIOWA_QuickProjects.updateUrlText = function() {
         'surveys',
         'longitudinal',
         'autonumber',
-        'removeSelf',
         'userItem'
     ];
 
@@ -84,6 +86,12 @@ UIOWA_QuickProjects.updateUrlText = function() {
                     var rightsValue = rightsSelect.options[rightsSelect.selectedIndex].value;
 
                     paramStr += '&rights[]=' + rightsValue;
+
+                    var notifyValue = projectInfo[j].children[1].children['surveyNotification'].children[0].checked;
+
+                    if (projectSetup == 'modify') {
+                        paramStr += '&surveyNotification[]=' + notifyValue;
+                    }
                 }
             }
             else if (paramList[i] == 'purpose_other') {
@@ -106,8 +114,8 @@ UIOWA_QuickProjects.updateUrlText = function() {
                     }
                 }
             }
-            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber' || paramList[i] == 'removeSelf') {
-                if (projectInfo[j].checked) {
+            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber') {
+                if (projectInfo[j].checked && projectSetup == 'create') {
                     paramStr += '&' + paramList[i] + '=' + '1';
                 }
             }
@@ -119,6 +127,14 @@ UIOWA_QuickProjects.updateUrlText = function() {
 
                 if (tokenStyle.display !== 'none' && inputValue) {
                     paramStr += '&' + paramList[i] + '=' + inputValue.replace(/ /g, '+');
+                }
+            }
+            else if (paramList[i] == 'flag') {
+                if (projectSetup == 'modify') {
+                    var flagSelect = projectInfo[j];
+                    var flagValue = flagSelect.options[flagSelect.selectedIndex].value;
+
+                    paramStr += '&' + paramList[i] + '=' + flagValue.replace(/ /g, '+');
                 }
             }
             else {
@@ -140,18 +156,29 @@ UIOWA_QuickProjects.updateFields = function(reqToken) {
     var projectTitle = document.getElementById('app_title');
     var projectPurpose = document.getElementById('purpose');
     var superToken = document.getElementById('superToken');
+    var reservedFlag = document.getElementById('reservedFlag');
+    var surveyNotifications = $('input[name = "surveyNotification"]');
+    var newProjectSettings = $('#newProjectSettings > input');
 
     if (projectSetup == 'create') {
         projectTitle.required = true;
         projectPurpose.required = true;
-        superToken.style = ""
+        superToken.style = "";
+
+        newProjectSettings.attr("disabled", false);
+        surveyNotifications.attr("disabled", true);
+        reservedFlag.style.display = "none";
     }
-    else if (projectSetup == 'copy') {
+    else if (projectSetup == 'modify') {
         projectTitle.required = false;
         projectPurpose.required = false;
+        reservedFlag.style = "";
+
+        newProjectSettings.attr("disabled", true);
+        surveyNotifications.attr("disabled", false);
 
         if (!reqToken[0]) {
-            superToken.style.display = "none"
+            superToken.style.display = "none";
         }
     }
 };

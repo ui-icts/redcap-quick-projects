@@ -1,6 +1,6 @@
 {
   "name": "Quick Projects",
-  "description": "Create/copy projects and update info/users via single POST request",
+  "description": "Create/modify projects via single POST request",
 
   "namespace": "UIOWA\\QuickProjects",
 
@@ -40,8 +40,25 @@
       "required": false
     },
     {
-      "key": "copy-project-settings",
-      "name": "Copy Project Settings",
+      "key": "restrict-ip",
+      "name": "Only allow requests from whitelisted IP addresses",
+      "type": "checkbox",
+      "required": false
+    },
+    {
+      "key": "whitelisted-ip",
+      "name": "Allowed IP address",
+      "type": "text",
+      "required": false,
+      "repeatable": true,
+      "branchingLogic": {
+        "field": "restrict-ip",
+        "value": "true"
+      }
+    },
+    {
+      "key": "modify-project-settings",
+      "name": "Modify Project Settings",
       "type": "sub_settings",
       "required": false,
       "sub_settings": [
@@ -50,7 +67,7 @@
           "name": "Project note to identify reserved projects (must be enclosed in brackets, e.g. [reserved])",
           "type": "text",
           "required": true,
-          "repeatable": false
+          "repeatable": true
         },
         {
           "key": "alert-emails",
@@ -73,29 +90,19 @@
         },
         {
           "key": "require-super-token",
-          "name": "Require Super API Token for the Copy Project action",
+          "name": "Require Super API Token for the Modify Project action",
+          "type": "checkbox",
+          "required": false,
+          "repeatable": false
+        },
+        {
+          "key": "survey-notification-fail",
+          "name": "Return error message if Survey Notifications cannot be enabled",
           "type": "checkbox",
           "required": false,
           "repeatable": false
         }
       ]
-    },
-    {
-      "key": "restrict-ip",
-      "name": "Only allow requests from whitelisted IP addresses",
-      "type": "checkbox",
-      "required": false
-    },
-    {
-      "key": "whitelisted-ip",
-      "name": "Allowed IP address",
-      "type": "text",
-      "required": false,
-      "repeatable": true,
-      "branchingLogic": {
-        "field": "restrict-ip",
-        "value": "true"
-      }
     }
       ]
 }
