@@ -1,3 +1,34 @@
+$(document).ready(function () {
+    $('#user').autocomplete({
+        source: app_path_webroot + "UserRights/search_user.php",
+        minLength: 2,
+        delay: 150,
+        html: true,
+        select: function (event, ui) {
+            $(this).val(ui.item.value);
+            return false;
+        }
+    });
+
+    $[ "ui" ][ "autocomplete" ].prototype["_renderItem"] = function( ul, item) {
+        return $( "<li></li>" )
+            .data( "item.autocomplete", item )
+            .append( $( "<a></a>" ).html( item.label ) )
+            .appendTo( ul );
+    };
+
+    $('#storedXml').change(function () {
+        var projectToken = $('#templateProjectToken');
+
+        if (this.checked) {
+            projectToken.hide();
+        }
+        else {
+            projectToken.show();
+        }
+    });
+});
+
 var UIOWA_QuickProjects = {};
 
 UIOWA_QuickProjects.addService = function() {
@@ -33,6 +64,8 @@ UIOWA_QuickProjects.updateUrlText = function() {
     var paramStr = '';
     var paramList = [
         'token',
+        'projectToken',
+        'storedXml',
         'flag',
         'title',
         'irb',
@@ -51,14 +84,6 @@ UIOWA_QuickProjects.updateUrlText = function() {
 
     var projectSetup = document.querySelector('input[name = "setupMethod"]:checked').value;
     paramStr += '&method=' + projectSetup;
-
-    if (projectSetup == 'create') {
-        document.querySelector('#projectLink').checked = true;
-        document.querySelector('#publicSurveyLink').disabled = true;
-    }
-    else {
-        document.querySelector('#publicSurveyLink').disabled = false;
-    }
 
     var returnValue = document.querySelector('input[name = "returnValue"]:checked').value;
     paramStr += '&return=' + returnValue;
@@ -89,9 +114,7 @@ UIOWA_QuickProjects.updateUrlText = function() {
 
                     var notifyValue = projectInfo[j].children[1].children['surveyNotification'].children[0].checked;
 
-                    if (projectSetup == 'modify') {
-                        paramStr += '&surveyNotification[]=' + notifyValue;
-                    }
+                    paramStr += '&surveyNotification[]=' + notifyValue;
                 }
             }
             else if (paramList[i] == 'purpose_other') {
@@ -114,7 +137,7 @@ UIOWA_QuickProjects.updateUrlText = function() {
                     }
                 }
             }
-            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber') {
+            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber' || paramList[i] == 'storedXml') {
                 if (projectInfo[j].checked && projectSetup == 'create') {
                     paramStr += '&' + paramList[i] + '=' + '1';
                 }
@@ -155,19 +178,27 @@ UIOWA_QuickProjects.updateFields = function(reqToken) {
     var projectSetup = document.querySelector('input[name = "setupMethod"]:checked').value;
     var projectTitle = document.getElementById('app_title');
     var projectPurpose = document.getElementById('purpose');
-    var superToken = document.getElementById('superToken');
+    var superToken = $('#superToken');
     var reservedFlag = document.getElementById('reservedFlag');
-    var surveyNotifications = $('input[name = "surveyNotification"]');
     var newProjectSettings = $('#newProjectSettings > input');
+    var templateProjectToken = $('#templateProjectToken');
+    var templateXml = $('#templateXml');
 
     if (projectSetup == 'create') {
         projectTitle.required = true;
         projectPurpose.required = true;
-        superToken.style = "";
+
+        if (!templateXml.hasClass('always-hide')) {
+            superToken.show();
+        }
 
         newProjectSettings.attr("disabled", false);
-        surveyNotifications.attr("disabled", true);
         reservedFlag.style.display = "none";
+        templateProjectToken.show();
+
+        if (!templateXml.hasClass('always-hide')) {
+            templateXml.show();
+        }
     }
     else if (projectSetup == 'modify') {
         projectTitle.required = false;
@@ -175,11 +206,13 @@ UIOWA_QuickProjects.updateFields = function(reqToken) {
         reservedFlag.style = "";
 
         newProjectSettings.attr("disabled", true);
-        surveyNotifications.attr("disabled", false);
 
-        if (!reqToken[0]) {
-            superToken.style.display = "none";
+        if (!reqToken[0] || !superToken.hasClass('show-on-modify')) {
+            superToken.hide();
         }
+
+        templateProjectToken.hide();
+        templateXml.hide();
     }
 };
 

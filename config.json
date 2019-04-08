@@ -1,6 +1,6 @@
 {
   "name": "Quick Projects",
-  "description": "Create/modify projects via single POST request",
+  "description": "Create/modify projects via a single POST request",
 
   "namespace": "UIOWA\\QuickProjects",
 
@@ -29,15 +29,26 @@
   "system-settings": [
     {
       "key": "prepopulate-token",
-      "name": "Prepopulate Super API Token based on currently logged in user",
+      "name": "Prepopulate Super API Token based on currently logged in user (Request Builder)",
       "type": "checkbox",
       "required": false
     },
     {
       "key": "super-api-token",
-      "name": "Prepopulate Super API Token with specified value (overrides above option)",
+      "name": "Prepopulate Super API Token with specified value (Request Builder)",
       "type": "text",
       "required": false
+    },
+    {
+      "key": "no-token-required",
+      "name": "Automatically use above token if not specified in request parameter",
+      "type": "checkbox",
+      "required": false,
+      "branchingLogic": {
+        "field": "super-api-token",
+        "op": "<>",
+        "value": ""
+      }
     },
     {
       "key": "restrict-ip",
@@ -55,6 +66,13 @@
         "field": "restrict-ip",
         "value": "true"
       }
+    },
+    {
+      "key": "template-xml-file",
+      "name": "Stored project metadata file (XML in CDISC ODM format)",
+      "type": "file",
+      "required": false,
+      "repeatable": false
     },
     {
       "key": "modify-project-settings",

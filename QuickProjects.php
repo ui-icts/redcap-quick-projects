@@ -53,13 +53,19 @@ class QuickProjects extends AbstractExternalModule {
     }
 
     public function generateProject() {
+        $protocol = isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
+
         session_start();
+
+        error_log('test');
 
         global $conn;
         if (!isset($conn))
         {
             db_connect(false);
         }
+
+        error_log($_REQUEST['token']);
 
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
             self::returnResultMessage(["ERROR: The requested method is not implemented."], null);
@@ -91,7 +97,7 @@ class QuickProjects extends AbstractExternalModule {
             $apiRequired = false;
         }
 
-        if (db_num_rows($result) == 0 && $apiRequired) {
+        if (db_num_rows($result) == 0 && $apiRequired && !$this->getSystemSetting('no-token-required')) {
             self::returnResultMessage(["ERROR: Invalid API Super Token"], null);
         }
 
@@ -123,7 +129,12 @@ class QuickProjects extends AbstractExternalModule {
             self::returnResultMessage(["ERROR: Project Title is missing. This parameter is required for project copies."], null);
         }
 
-        $supertoken = $_REQUEST['token'];
+        if ($this->getSystemSetting('no-token-required')) {
+            $supertoken = $this->getSystemSetting('super-api-token');
+        }
+        else {
+            $supertoken = $_REQUEST['token'];
+        }
 
         $projectTitle = urldecode($_REQUEST['title']);
         $projectNote = urldecode($_REQUEST['note']);
@@ -175,9 +186,24 @@ class QuickProjects extends AbstractExternalModule {
             'data' => ''
         );
 
+        $exportProjectXml = array(
+            'token' => '',
+            'content' => 'project_xml'
+        );
+
         if ($_REQUEST['method'] == 'create') {
-            if ($_REQUEST['return'] == 'publicSurveyLink') {
-                self::returnResultMessage(["ERROR: New projects cannot return public survey links. Project was not created."], null);
+            if (isset($_REQUEST['projectToken'])) {
+                $exportProjectXml['token'] = $_REQUEST['projectToken'];
+                $projectXml = $this->redcapApiCall($exportProjectXml, false);
+
+                $createProject['odm'] = $projectXml;
+            }
+
+            if ($_REQUEST['storedXml'] == 1) {
+                $docId = self::getSystemSetting('template-xml-file');
+                $filename = db_query('select stored_name from redcap_edocs_metadata where doc_id = ' . $docId);
+
+                $createProject['odm'] = file_get_contents(EDOC_PATH . db_fetch_assoc($filename)['stored_name']);
             }
 
             $token = $this->redcapApiCall($createProject, false);
@@ -261,6 +287,22 @@ class QuickProjects extends AbstractExternalModule {
 
         $this->redcapApiCall($importUsers, false);
 
+        if ($reservedPID == null) {
+            $result = db_query('select project_id from redcap_user_rights where api_token = "' . $token . '"');
+            $reservedPID = db_fetch_assoc($result)['project_id'];
+        }
+
+        if ($_REQUEST['method'] == 'create' && $_REQUEST['return'] == 'publicSurveyLink') {
+            $result = db_query('select event_id from redcap_events_metadata
+left join redcap_events_arms on redcap_events_metadata.arm_id = redcap_events_arms.arm_id
+where project_id = ' . $reservedPID);
+            $eventId = db_fetch_assoc($result)['event_id'];
+            $result = db_query('select survey_id from redcap_surveys where project_id = ' . $reservedPID);
+            $surveyId = db_fetch_assoc($result)['survey_id'];
+
+            \Survey::setHash($surveyId, null, $eventId, null, true);
+        }
+
         if (isset($_REQUEST['surveyNotification'])) {
             $notifications = $_REQUEST['surveyNotification'];
 
@@ -290,7 +332,7 @@ class QuickProjects extends AbstractExternalModule {
         }
 
         if ($_REQUEST['return'] == 'publicSurveyLink') {
-                $sql = "
+            $sql = "
             SELECT s.project_id,s.form_name,s.title as survey_title
             ,pr.app_title, p.hash
             FROM redcap_surveys s
@@ -320,7 +362,7 @@ class QuickProjects extends AbstractExternalModule {
                 self::returnResultMessage($successMsg, $urlString);
             }
             else {
-                self::returnResultMessage(['No public survey link found. Is the template project configured properly? NOTE: The reserved project (PID: ' . $reservedPID . ') was still updated.'], null);
+                self::returnResultMessage(['No public survey link found.'], null);
             }
 
         }
@@ -332,7 +374,8 @@ class QuickProjects extends AbstractExternalModule {
             $exportedProjectInfo = json_decode($exportedProjectInfo, true);
 
             $urlString =
-                sprintf("https://%s%sProjectSetup/index.php?pid=%d",  // Project Setup page
+                sprintf("%s%s%sProjectSetup/index.php?pid=%d",  // Project Setup page
+                    $protocol,
                     SERVER_NAME,
                     APP_PATH_WEBROOT,
                     $exportedProjectInfo['project_id']);
@@ -402,12 +445,34 @@ class QuickProjects extends AbstractExternalModule {
                         <label for="publicSurveyLink"> Public Survey Link</label>
                     </td>
                 </tr>
-                <tr valign="top" id="superToken">
+                <tr valign="top" id="superToken" style="display:none" class="<?= $this->getSystemSetting('require-super-token') ? 'show-on-modify ' : '' ?><?= $this->getSystemSetting('no-token-required') ? 'always-hide ' : '' ?>">
                     <td style="padding-right:20px;width:150px;">
                         <b>Super API token: </b>
                     </td>
                     <td>
                         <input id="token" type="text" name="token" style="width:70%;max-width:450px;" required value="<?= $superApiToken ?>">
+                    </td>
+                </tr>
+                <tr>
+                    <td><br/></td>
+                </tr>
+                <tr valign="top" id="templateXml" style="padding-right:20px;width:150px;<?= !$this->getSystemSetting('template-xml-file') ? 'display:none;" class="always-hide' : '' ?>">
+                    <td style="padding-right:20px;width:150px;">
+                        <b>Use stored project XML template: </b>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="storedXml" id="storedXml" onclick="UIOWA_QuickProjects.updateUrlText()">
+                    </td>
+                </tr>
+                <tr>
+                    <td><br/></td>
+                </tr>
+                <tr valign="top" id="templateProjectToken">
+                    <td style="padding-right:20px;width:150px;">
+                        <b>Source project API token (optional): </b>
+                    </td>
+                    <td>
+                        <input id="projectToken" type="text" name="projectToken" style="width:70%;max-width:450px;">
                     </td>
                 </tr>
                 <tr valign="top" id="reservedFlag" style="display: none;">
