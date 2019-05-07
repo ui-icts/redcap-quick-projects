@@ -57,15 +57,11 @@ class QuickProjects extends AbstractExternalModule {
 
         session_start();
 
-        error_log('test');
-
         global $conn;
         if (!isset($conn))
         {
             db_connect(false);
         }
-
-        error_log($_REQUEST['token']);
 
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
             self::returnResultMessage(["ERROR: The requested method is not implemented."], null);
@@ -290,6 +286,32 @@ class QuickProjects extends AbstractExternalModule {
         if ($reservedPID == null) {
             $result = db_query('select project_id from redcap_user_rights where api_token = "' . $token . '"');
             $reservedPID = db_fetch_assoc($result)['project_id'];
+        }
+
+        // assign to roles if necessary
+        foreach ($users as $index=>$user) {
+            $rightsLookup = $rights[$index];
+
+            $role_name = $permissionsPresets[$rightsLookup]['data']['assign_manual_role'];
+
+            if ($role_name != '') {
+                $project_id = $reservedPID;
+
+                $sql = "select role_id from redcap_user_roles where role_name = '$role_name' and project_id = $project_id";
+
+                $role_id = db_fetch_assoc(db_query($sql))['role_id'];
+
+                $sql = "insert into redcap_user_rights (project_id, username, role_id) values ($project_id, '" . db_escape($user) . "', " . checkNull($role_id) . ")
+			on duplicate key update role_id = $role_id";
+                if (db_query($sql)) {
+                    // Logging (if user was created)
+                    if (db_affected_rows() === 1) {
+                        \REDCap::logEvent("Created User\n<font color=\"#000066\">(Quick Projects)</font>", 'user = \'' . $user . '\'', NULL, NULL, NULL, $project_id);
+                    }
+                    // Logging for user assignment
+                    \REDCap::logEvent("Assign user to role\n<font color=\"#000066\">(Quick Projects)</font>", "user = '$user',\nrole = '$role_name'", NULL, NULL, NULL, $project_id);
+                }
+            }
         }
 
         if ($_REQUEST['method'] == 'create' && $_REQUEST['return'] == 'publicSurveyLink') {
