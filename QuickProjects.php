@@ -167,7 +167,7 @@ class QuickProjects extends AbstractExternalModule {
                 'project_irb_number' => $projectIrb,
                 'purpose' => $_REQUEST['purpose'],
                 'purpose_other' => $_REQUEST['purpose_other'],
-                'project_notes' => (isset($_POST['note']) ? $projectNote : ''),
+                'project_notes' => $projectNote,
                 'is_longitudinal' => $_REQUEST['longitudinal'],
                 'surveys_enabled' => $_REQUEST['surveys'],
                 'record_autonumbering_enabled' => $_REQUEST['autonumber']
