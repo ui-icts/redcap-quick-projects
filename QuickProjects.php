@@ -353,6 +353,20 @@ where project_id = ' . $reservedPID);
             }
         }
 
+        if ($_REQUEST['prod'] == 1) {
+            $sql = "
+                UPDATE redcap_projects
+                SET production_time = '".NOW."', inactive_time = NULL, status = 1
+                WHERE project_id = ?";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param('i', $reservedPID);
+            $stmt->execute();
+            $stmt->close();
+
+            \REDCap::logEvent("Manage/Design","Move project to production status (Quick Projects)",$sql,null,null,$reservedPID);
+        }
+
         if ($_REQUEST['return'] == 'publicSurveyLink') {
             $sql = "
             SELECT s.project_id,s.form_name,s.title as survey_title
@@ -621,7 +635,9 @@ UIOWA_QuickProjects.updateUrlText();
                     <input type="checkbox" name="longitudinal" id="longitudinal" onclick="UIOWA_QuickProjects.updateUrlText()">
                     <label for="longitudinal">Longitudinal study</label><br/>
                     <input type="checkbox" name="autonumber" id="autonumber" onclick="UIOWA_QuickProjects.updateUrlText()">
-                    <label for="autonumber">Record autonumbering</label>
+                    <label for="autonumber">Record autonumbering</label><br/>
+                    <input type="checkbox" name="prod" id="prod" onclick="UIOWA_QuickProjects.updateUrlText()">
+                    <label for="prod">Move to Production status</label>
                 </td>
             </tr>
             <tr>

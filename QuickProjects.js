@@ -77,6 +77,7 @@ UIOWA_QuickProjects.updateUrlText = function() {
         'surveys',
         'longitudinal',
         'autonumber',
+        'prod',
         'userItem'
     ];
 
@@ -137,7 +138,7 @@ UIOWA_QuickProjects.updateUrlText = function() {
                     }
                 }
             }
-            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber' || paramList[i] == 'storedXml') {
+            else if (paramList[i] == 'surveys' || paramList[i] == 'longitudinal' || paramList[i] == 'autonumber' || paramList[i] == 'storedXml' || paramList[i] == 'prod') {
                 if (projectInfo[j].checked && projectSetup == 'create') {
                     paramStr += '&' + paramList[i] + '=' + '1';
                 }
