@@ -98,6 +98,11 @@ class QuickProjects extends AbstractExternalModule {
         }
 
         if ($_REQUEST['unique'] == 'true') {
+            // Check IRB number is not "" or null
+            if ($_REQUEST['irb'] == '' || $_REQUEST['irb'] == null) {
+                self::returnResultMessage(["ERROR: No IRB Number."], null);
+            }
+
             // Check for duplicate IRB number
             $sql = "
             SELECT
