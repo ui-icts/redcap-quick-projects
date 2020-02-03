@@ -93,8 +93,10 @@ class QuickProjects extends AbstractExternalModule {
             $apiRequired = false;
         }
 
-        if (db_num_rows($result) == 0 && $apiRequired && !$this->getSystemSetting('no-token-required')) {
-            self::returnResultMessage(["ERROR: Invalid API Super Token"], null);
+        if (db_num_rows($result) == 0) {
+            if ($apiRequired && !$this->getSystemSetting('no-token-required')) {
+                self::returnResultMessage(["ERROR: Invalid API Super Token"], null);
+            }
         }
 
         if ($_REQUEST['unique'] == 'true') {
