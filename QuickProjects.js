@@ -218,13 +218,7 @@ UIOWA_QuickProjects.updateFields = function(reqToken) {
 };
 
 UIOWA_QuickProjects.confirmRedirect = function(message, url) {
-    var msgStr = '';
-
-    for (var i in message) {
-        msgStr += message[i] + (i < message.length - 1 ? '\n\n' : '')
-    }
-
-    var confirmed = confirm(msgStr);
+    var confirmed = confirm(message);
 
     if (confirmed) {
         window.location.href = url;

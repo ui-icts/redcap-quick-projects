@@ -64,15 +64,15 @@ class QuickProjects extends AbstractExternalModule {
         }
 
         if ($_SERVER['REQUEST_METHOD'] != 'POST') {
-            self::returnResultMessage(["ERROR: The requested method is not implemented."], null);
+            self::returnResultMessage("The requested method is not implemented.", null);
         }
 
         if ($this->getSystemSetting('restrict-ip') && !in_array($_SERVER['REMOTE_ADDR'], $this->getSystemSetting('whitelisted-ip'))) {
-            self::returnResultMessage(["ERROR: This IP (" . $_SERVER['REMOTE_ADDR'] . ") is not on the whitelist."], null);
+            self::returnResultMessage("This IP (" . $_SERVER['REMOTE_ADDR'] . ") is not on the whitelist.", null);
         }
 
         $permissionsPresets = self::getPermissionsPresets();
-        $successMsg = [];
+        $successMsg = '';
 
         $sql = "
             SELECT
@@ -95,14 +95,14 @@ class QuickProjects extends AbstractExternalModule {
 
         if (db_num_rows($result) == 0) {
             if ($apiRequired && !$this->getSystemSetting('no-token-required')) {
-                self::returnResultMessage(["ERROR: Invalid API Super Token"], null);
+                self::returnResultMessage("Invalid API Super Token.", null);
             }
         }
 
         if ($_REQUEST['unique'] == 'true') {
             // Check IRB number is not "" or null
             if ($_REQUEST['irb'] == '' || $_REQUEST['irb'] == null) {
-                self::returnResultMessage(["ERROR: No IRB Number."], null);
+                self::returnResultMessage("No IRB Number.", null);
             }
 
             // Check for duplicate IRB number
@@ -120,16 +120,16 @@ class QuickProjects extends AbstractExternalModule {
             $stmt->close();
 
             if ($result -> num_rows > 0) {
-                self::returnResultMessage(["ERROR: Project with provided IRB number already exists."], null);
+                self::returnResultMessage("Project with provided IRB number already exists.", null);
 
             }
         }
 
         if ($_REQUEST['method'] == "create" && ($_REQUEST['title'] == '' || $_REQUEST['purpose'] == '')) {
-            self::returnResultMessage(["ERROR: Project Title and/or Purpose are missing. These parameters are required for new project creation."], null);
+            self::returnResultMessage("Project Title and/or Purpose are missing. These parameters are required for new project creation.", null);
         }
         if ($_REQUEST['method'] == "modify" && ($_REQUEST['title'] == '')) {
-            self::returnResultMessage(["ERROR: Project Title is missing. This parameter is required for project copies."], null);
+            self::returnResultMessage("Project Title is missing. This parameter is required for project copies.", null);
         }
 
         if ($this->getSystemSetting('no-token-required')) {
@@ -197,7 +197,7 @@ class QuickProjects extends AbstractExternalModule {
         if ($_REQUEST['method'] == 'create') {
             if (isset($_REQUEST['projectToken'])) {
                 $exportProjectXml['token'] = $_REQUEST['projectToken'];
-                $projectXml = $this->redcapApiCall($exportProjectXml, false);
+                $projectXml = $this->redcapApiCall($exportProjectXml);
 
                 $createProject['odm'] = $projectXml;
             }
@@ -209,9 +209,9 @@ class QuickProjects extends AbstractExternalModule {
                 $createProject['odm'] = file_get_contents(EDOC_PATH . db_fetch_assoc($filename)['stored_name']);
             }
 
-            $token = $this->redcapApiCall($createProject, false);
+            $token = $this->redcapApiCall($createProject);
 
-            array_push($successMsg, "Project successfully created!");
+            $successMsg .= 'Project successfully created! ';
         }
         else if ($_REQUEST['method'] == 'modify') {
             $projectInfo['content'] = 'project_settings';
@@ -220,7 +220,7 @@ class QuickProjects extends AbstractExternalModule {
             $reservedFlag = urldecode($_REQUEST['flag']);
 
             if (!$reservedFlag || !($reservedFlag[0] == '[' && $reservedFlag[strlen($reservedFlag) - 1] == ']') || !in_array($reservedFlag, $reservedFlagLookup)) {
-                self::returnResultMessage(["ERROR: Reserved project flag is invalid or blank. Please check your configuration in the Control Center."], null);
+                self::returnResultMessage("Reserved project flag is invalid or blank. Please check your configuration in the Control Center.", null);
             }
 
             $sql = "
@@ -242,12 +242,12 @@ class QuickProjects extends AbstractExternalModule {
             $projectCount = 0;
             $isFirstRow = TRUE;
 
-            $toEmails = implode(',', self::getSystemSetting('alert-emails')[0]);
+            $toEmails = implode(',', self::getSystemSetting('alert-emails'));
             $fromEmail = self::getSystemSetting('alert-email-from')[0];
 
             if ($result->num_rows == 0) {
                 REDCap::email($toEmails, $fromEmail, 'CRITICAL: Quick Projects Reserve Empty', 'No reserved projects found. Last request parameters: ' . var_export($_REQUEST, true));
-                self::returnResultMessage(["ERROR: No reserved projects found. Sending email to administrator with study information for manual creation. "], null);
+                self::returnResultMessage("No reserved projects found. Sending email to administrator with study information for manual creation. ", null);
             } elseif ($result->num_rows < self::getSystemSetting('reserve-low-threshold')[0]) {
                 REDCap::email($toEmails, $fromEmail, 'Warning: Quick Projects Reserve Low', $result->num_rows . ' reserved projects remaining. Please create more reserved projects.');
             }
@@ -263,13 +263,13 @@ class QuickProjects extends AbstractExternalModule {
                 $projectCount += 1;
             }
 
-            array_push($successMsg, "Project successfully modified!");
+            $successMsg .= "Project successfully modified!";
         }
 
         $projectInfo['token'] = $token;
         $importUsers['token'] = $token;
 
-        $this->redcapApiCall($projectInfo, false);
+        $this->redcapApiCall($projectInfo);
 
         $users = $_REQUEST['user'];
         $rights = $_REQUEST['rights'];
@@ -288,7 +288,7 @@ class QuickProjects extends AbstractExternalModule {
 
         $importUsers['data'] = json_encode($allUserData);
 
-        $this->redcapApiCall($importUsers, false);
+        $this->redcapApiCall($importUsers);
 
         if ($reservedPID == null) {
             $result = db_query('select project_id from redcap_user_rights where api_token = "' . $token . '"');
@@ -350,7 +350,7 @@ where project_id = ' . $reservedPID);
 
                     if (!$result) {
                         if ($this->getSystemSetting('survey-notification-fail')[0]) {
-                            self::returnResultMessage(["WARNING: Project modified successfully but failed to enable survey notifications."], null);
+                            self::returnResultMessage("Project modified successfully but failed to enable survey notifications.", null);
                         }
                     }
                     else {
@@ -400,12 +400,12 @@ where project_id = ' . $reservedPID);
             if ($row['hash']) {
                 $urlString = APP_PATH_WEBROOT_FULL . 'surveys/?s=' . $row['hash'];
 
-                array_push($successMsg, "Click OK to visit the public survey or Cancel to stay on this page.");
+                $successMsg .= "Click OK to visit the public survey or Cancel to stay on this page.";
 
-                self::returnResultMessage($successMsg, $urlString);
+                self::returnResultMessage('Click OK to visit the public survey or Cancel to stay on this page.', $urlString);
             }
             else {
-                self::returnResultMessage(['No public survey link found.'], null);
+                self::returnResultMessage('No public survey link found.', null);
             }
 
         }
@@ -413,7 +413,7 @@ where project_id = ' . $reservedPID);
             $createProject['token'] = $token;
             unset($createProject['data']);
 
-            $exportedProjectInfo = $this->redcapApiCall($createProject, false);
+            $exportedProjectInfo = $this->redcapApiCall($createProject);
             $exportedProjectInfo = json_decode($exportedProjectInfo, true);
 
             $urlString =
@@ -423,12 +423,12 @@ where project_id = ' . $reservedPID);
                     APP_PATH_WEBROOT,
                     $exportedProjectInfo['project_id']);
 
-            array_push($successMsg, "Click OK to visit the project setup page or Cancel to stay on this page.");
+            $successMsg .= "Click OK to visit the project setup page or Cancel to stay on this page.";
 
             self::returnResultMessage($successMsg, $urlString);
         }
         else {
-            self::returnResultMessage(["ERROR: Unknown return type."], null);
+            self::returnResultMessage("Unknown return type.", null);
         }
     }
 
@@ -726,10 +726,21 @@ UIOWA_QuickProjects.updateUrlText();
     }
 
     public function returnResultMessage($message, $url) {
-
         if ($url == null) {
+            // something went wrong, exit
+            $message = 'Quick Projects ERROR: ' . $message;
+
             http_response_code(400);
-            echo $message[0];
+            echo $message, PHP_EOL, 'Quick Projects will not attempt any further operations.';
+
+            $toEmails = implode(',', self::getSystemSetting('alert-emails'));
+            $fromEmail = self::getSystemSetting('alert-email-from');
+
+            if ($toEmails) {
+                $_REQUEST['token'] = '[redacted]';
+
+                REDCap::email($toEmails, $fromEmail, 'Quick Projects ERROR - 400 Bad Request', $message . " Parameters: " . var_export($_REQUEST, true));
+            }
             exit;
         }
 
@@ -745,7 +756,7 @@ UIOWA_QuickProjects.updateUrlText();
         }
     }
 
-    public function redcapApiCall($data, $outputFlag) {
+    public function redcapApiCall($data) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, self::$apiUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -757,16 +768,19 @@ UIOWA_QuickProjects.updateUrlText();
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
         curl_setopt($ch, CURLOPT_FRESH_CONNECT, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
-        $output = curl_exec($ch);
+        $result = curl_exec($ch);
 
         curl_close($ch);
 
-        if ($outputFlag) {
-            echo $output;
+        $errorCheck = json_decode($result, true);
+
+        if (isset($errorCheck['error'])) {
+            $this->returnResultMessage('REDCap ' . $data['content'] . ' API call failed (' . $errorCheck['error'] . ').', null);
+
+            exit;
         }
-        else {
-            return $output;
-        }
+
+        return $result;
     }
 }
 ?>

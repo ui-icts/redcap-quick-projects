@@ -75,6 +75,19 @@
       "repeatable": false
     },
     {
+      "key": "alert-emails",
+      "name": "Email address to send error reports on failed requests",
+      "type": "text",
+      "required": false,
+      "repeatable": true
+    },
+    {
+      "key": "alert-email-from",
+      "name": "Email address to send error reports from",
+      "type": "text",
+      "required": false
+    },
+    {
       "key": "modify-project-settings",
       "name": "Modify Project Settings",
       "type": "sub_settings",
@@ -86,19 +99,6 @@
           "type": "text",
           "required": true,
           "repeatable": true
-        },
-        {
-          "key": "alert-emails",
-          "name": "Email address to send alerts about reserved projects",
-          "type": "text",
-          "required": false,
-          "repeatable": true
-        },
-        {
-          "key": "alert-email-from",
-          "name": "Email address to send alerts from",
-          "type": "text",
-          "required": false
         },
         {
           "key": "reserve-low-threshold",
