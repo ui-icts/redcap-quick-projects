@@ -28,10 +28,10 @@ NOTE: This feature was originally implemented as a workaround for the lack of a 
 * **Automatically use above token if not specified in request parameter:** If no super API token is passed with a request, the module will assume the token in the field above is to be used. WARNING: Enable at your own risk, as this allows anyone to create projects without authentication by submitting a request. It is recommended that the IP whitelisting feature is used in conjunction with this option for additional security.
 * **Only allow requests from whitelisted IP addresses:** If this option is enabled, Quick Projects will immediately return an error message to requests from IP addresses that are not explicitly whitelisted.
 * **Stored project metadata file:** An XML file containing project metadata (in CDISC ODM format) can be uploaded and optionally imported into projects created with this module.
+* **Email address to send error reports:** Various notifications will be sent to defined emails when a reserve is empty or low or if errors cause a request to fail.
 
 #### Modify Project Settings
 
 * **Project note to identify reserved projects:** When making modify project requests, Quick Projects will only use projects with this exact string in its project note. The string can be anything but must be enclosed with brackets (for example, "[RESERVED FOR RESEARCH STUDY]" would be a valid reserve note). Multiple strings can be defined so requests can be executed against multiple different project reserves.
-* **Email address to send alerts about reserved projects:** Various notifications will be sent to defined emails when a reserve is empty or low. If a project modify request is submitted while a reserve is empty, the request information will be included in the email.
 * **Require Super API Token for the Modify Project action:** A Super API Token is not required by REDCap for modifying projects, but can be optionally required by the Quick Projects module as an extra layer of authentication.
 * **Return error message if Survey Notifications cannot be enabled:** If a modify request fails to enable survey notifications for a user but is otherwise successful, it will not return an error unless this option is checked.
