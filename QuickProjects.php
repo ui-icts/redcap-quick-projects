@@ -246,7 +246,7 @@ class QuickProjects extends AbstractExternalModule {
             $fromEmail = self::getSystemSetting('alert-email-from')[0];
 
             if ($result->num_rows == 0) {
-                REDCap::email($toEmails, $fromEmail, 'CRITICAL: Quick Projects Reserve Empty', 'No reserved projects found. Last request parameters: ' . var_export($_REQUEST, true));
+                REDCap::email($toEmails, $fromEmail, 'CRITICAL: Quick Projects Reserve Empty', 'No reserved projects found. Last request parameters: ' . htmlentities(var_export($_REQUEST, true), ENT_QUOTES));
                 self::returnResultMessage("No reserved projects found. Sending email to administrator with study information for manual creation. ", null);
             } elseif ($result->num_rows < self::getSystemSetting('reserve-low-threshold')[0]) {
                 REDCap::email($toEmails, $fromEmail, 'Warning: Quick Projects Reserve Low', $result->num_rows . ' reserved projects remaining. Please create more reserved projects.');
@@ -540,7 +540,7 @@ where project_id = ' . $reservedPID);
                         <b>Project title:</b>
                     </td>
                     <td>
-                        <input name="title" id="app_title" type="text" style="width:95%;max-width:450px;" class="x-form-text x-form-field" onkeydown="if(event.keyCode==13){return false;}" value="<?= $_REQUEST['title'] ?>" required>
+                        <input name="title" id="app_title" type="text" style="width:95%;max-width:450px;" class="x-form-text x-form-field" onkeydown="if(event.keyCode==13){return false;}" value="<?= htmlentities($_REQUEST['title'], ENT_QUOTES) ?>" required>
                     </td>
                 </tr>
 
@@ -739,7 +739,7 @@ UIOWA_QuickProjects.updateUrlText();
             if ($toEmails) {
                 $_REQUEST['token'] = '[redacted]';
 
-                REDCap::email($toEmails, $fromEmail, 'Quick Projects ERROR - 400 Bad Request', $message . " Parameters: " . var_export($_REQUEST, true));
+                REDCap::email($toEmails, $fromEmail, 'Quick Projects ERROR - 400 Bad Request', $message . " Parameters: " . htmlentities(var_export($_REQUEST, true)), ENT_QUOTES);
             }
             exit;
         }
@@ -749,7 +749,7 @@ UIOWA_QuickProjects.updateUrlText();
             $_SESSION['redirectUrl'] = $url;
             $redirect = $_POST['redirect'];
 
-            header("Location: $redirect");
+            header("Location: " . $redirect);
         }
         else {
             echo $url;

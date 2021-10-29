@@ -5,5 +5,5 @@ $module->generateProject();
 
 if ($_POST['redirect']) {
     $redirect = $_POST['redirect'];
-    header("Location: $redirect");
+    header("Location: " . $redirect);
 }
